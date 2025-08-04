@@ -21,10 +21,10 @@
             type="danger"
             size="mini"
             @click="kickMember(member)"
-          >踢出</el-button>
+          >踢出群聊</el-button>
 
           <el-button
-            :type="member.identity === 2 ? 'warning' : 'success'"
+            :type="member.identity === 2 ? 'warning' : 'primary'"
             size="mini"
             @click="toggleAdmin(member)"
           >
@@ -234,7 +234,7 @@
                   </el-button>
 
                   <el-button 
-                  type="info" 
+                  type="success" 
                   size="mini"
                     @click="openMemberDialog(group)"
                   >
@@ -274,7 +274,7 @@
                 <p>群号: {{ group.groupIdentifyId }}</p>
 
                 <el-button 
-                  type="info" 
+                  type="success" 
                   size="mini"
                     @click="openMemberDialog(group)"
                   >
@@ -312,7 +312,7 @@
                 <p>群号: {{ group.groupIdentifyId }}</p>
 
                 <el-button 
-                  type="info" 
+                  type="success" 
                   size="mini"
                     @click="openMemberDialog(group)"
                   >
@@ -432,6 +432,8 @@ export default {
       this.$message.error('请求失败');
       console.error(err);
     }
+  }).catch(() => {
+    this.$message.info('已取消移除操作'); // 添加这行
   });
 }
 ,async toggleAdmin(member) {
@@ -695,7 +697,9 @@ async submitEditGroup() {
           this.$message.error('操作失败');
           console.error(err);
         }
-      }).catch(() => {});
+      }).catch(() => {
+         this.$message.info('已取消注销群聊');
+      });
     },
     
     // 退出群聊
@@ -722,7 +726,9 @@ async submitEditGroup() {
           this.$message.error('操作失败');
           console.error(err);
         }
-      }).catch(() => {});
+      }).catch(() => {
+        this.$message.info('已取消退出');
+      });
     },
     
     // 从列表中移除群聊
