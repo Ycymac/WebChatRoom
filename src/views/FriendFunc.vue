@@ -1,5 +1,43 @@
 <template>
   <div class="friend-container">
+    <!-- 群成员面板 -->
+      <el-dialog
+  title="群聊成员"
+  :visible.sync="showMemberDialog"
+  width="500px"
+  append-to-body
+>
+  <div v-if="memberList.length">
+    <el-row v-for="member in memberList" :key="member.id" class="member-item" align="middle" justify="space-between">
+      <el-col :span="18" class="member-info">
+        <img :src="member.image || defaultGroupAvatar" class="group-avatar" @error="setDefaultGroupImage" />
+        <span class="member-name">{{ member.nickName }}</span>
+        <span class="member-account">（账号：{{ member.accountId }}）</span>
+      </el-col>
+
+      <el-col :span="6" class="member-actions" v-if="isGroupCreator(selectedGroup)">
+        <template v-if="member.id !== id">
+          <el-button
+            type="danger"
+            size="mini"
+            @click="kickMember(member)"
+          >踢出</el-button>
+
+          <el-button
+            :type="member.identity === 2 ? 'warning' : 'success'"
+            size="mini"
+            @click="toggleAdmin(member)"
+          >
+            {{ member.identity === 2 ? '撤销管理员' : '设为管理员' }}
+          </el-button>
+        </template>
+      </el-col>
+    </el-row>
+  </div>
+
+  <div v-else style="text-align: center; padding: 20px;">暂无成员信息</div>
+</el-dialog>
+
     <!-- 创建群聊按钮（固定在右下角） -->
     <div class="create-group-button" v-if="activeTab === 'groups'">
       <el-button 
@@ -195,6 +233,14 @@
                    编辑群聊
                   </el-button>
 
+                  <el-button 
+                  type="info" 
+                  size="mini"
+                    @click="openMemberDialog(group)"
+                  >
+                    群成员 
+                  </el-button>
+
 
                 <el-button 
                   type="danger" 
@@ -226,6 +272,15 @@
               </template>
               <div class="group-detail">
                 <p>群号: {{ group.groupIdentifyId }}</p>
+
+                <el-button 
+                  type="info" 
+                  size="mini"
+                    @click="openMemberDialog(group)"
+                  >
+                    群成员 
+                  </el-button>
+
                 <el-button 
                   type="warning" 
                   size="mini"
@@ -255,6 +310,15 @@
               </template>
               <div class="group-detail">
                 <p>群号: {{ group.groupIdentifyId }}</p>
+
+                <el-button 
+                  type="info" 
+                  size="mini"
+                    @click="openMemberDialog(group)"
+                  >
+                    群成员 
+                  </el-button>
+
                 <el-button 
                   type="warning" 
                   size="mini"
@@ -299,7 +363,10 @@ export default {
       id: null,
       name: '',
       image: ''
-      }
+      },
+      showMemberDialog: false,
+      selectedGroup: null, // 当前选中的群聊对象
+      memberList: [],       // 当前群聊成员
 
     };
   },
@@ -321,6 +388,80 @@ export default {
     this.loadFriends();
   },
   methods: {
+    async openMemberDialog(group) {
+  this.selectedGroup = group;
+  console.log("当前群聊创建者Id:"+group.creatorId);
+  console.log('当前用户 ID:', this.id);
+  console.log('当前群聊:', this.selectedGroup);
+  console.log('群成员:', this.memberList);
+  this.showMemberDialog = true;
+
+  try {
+    const res = await axios.post('http://localhost:8081/group/membersWithIdentity', {
+      groupId: group.id
+    });
+
+    if (res.data.code === 200) {
+      this.memberList = res.data.data;
+    } else {
+      this.$message.error('获取群成员失败');
+    }
+  } catch (err) {
+    this.$message.error('请求出错');
+    console.error(err);
+  }
+},async kickMember(member) {
+  this.$confirm(`确定将【${member.nickName}】移出群聊吗？`, '提示', {
+    confirmButtonText: '确定',
+    cancelButtonText: '取消',
+    type: 'warning'
+  }).then(async () => {
+    try {
+      const res = await axios.post('http://localhost:8081/group/quitfrmgrp', {
+        accountId: member.id,
+        groupId: this.selectedGroup.id
+      });
+
+      if (res.data.code === 200) {
+        this.$message.success('已移出成员');
+        this.memberList = this.memberList.filter(m => m.id !== member.id);
+      } else {
+        this.$message.error('操作失败');
+      }
+    } catch (err) {
+      this.$message.error('请求失败');
+      console.error(err);
+    }
+  });
+}
+,async toggleAdmin(member) {
+  const newIdentity = member.identity === 2 ? 1 : 2;
+  const action = newIdentity === 2 ? '设为管理员' : '撤销管理员';
+
+  try {
+    const res = await axios.post('http://localhost:8081/group/editMemberIdentity', {
+      accountId: member.id,
+      groupId: this.selectedGroup.id,
+      identity: newIdentity
+    });
+
+    if (res.data.code === 200) {
+      member.identity = newIdentity;
+      this.$message.success(`${action}成功`);
+    } else {
+      this.$message.error(`${action}失败`);
+    }
+  } catch (err) {
+    this.$message.error('请求失败');
+    console.error(err);
+  }
+}
+,
+isGroupCreator(group) {
+  return group && group.creatorId === this.id;
+}
+,
+
     openEditGroupDialog(group) {
       // 记录原始群聊信息（深拷贝）
       this.originalGroup = {
@@ -507,6 +648,7 @@ async submitEditGroup() {
         const res = await axios.post('http://localhost:8081/group/getGroupedGroups', {
           accountId: this.id
         });
+        console.log("加载的群聊信息：", res.data.data.createdGroups);
 
         if (res.data.code === 200) {
           this.createdGroups = res.data.data.createdGroups || [];
@@ -793,4 +935,31 @@ async submitEditGroup() {
 .el-collapse-item__content {
   padding-bottom: 15px;
 }
+.member-item {
+  margin: 10px 0;
+  padding: 5px 0;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.member-info {
+  display: flex;
+  align-items: center;
+}
+
+.member-info .group-avatar {
+  width: 32px;
+  height: 32px;
+  margin-right: 10px;
+}
+
+.member-name {
+  font-weight: 500;
+  margin-right: 6px;
+}
+
+.member-account {
+  font-size: 12px;
+  color: #888;
+}
+
 </style>
