@@ -81,16 +81,24 @@
 
       <!-- 群聊输入区域 -->
       <div class="input-area" v-if="selectedGroup">
-        <div class="character-count">
-          {{ inputMessage.length }}/100
+        <!-- 禁言提示 -->
+        <div v-if="myBannedStatus" class="ban-tip">
+           您已被禁言，无法发送消息。
         </div>
-        <el-input v-model="inputMessage" type="textarea" :rows="3" placeholder="输入消息..." resize="none" maxlength="100"
+
+  <!-- 正常输入区域 -->
+        <template v-else>
+          <div class="character-count">
+            {{ inputMessage.length }}/100
+          </div>
+          <el-input v-model="inputMessage" type="textarea" :rows="3" placeholder="输入消息..." resize="none" maxlength="100" :disabled="myBannedStatus" 
           @keyup.enter.native="handleKeyUp"></el-input>
         <div class="input-actions">
-          <el-button type="primary" @click="sendGroupMessage">发送</el-button>
-          <el-button icon="el-icon-paperclip" @click="triggerFileUpload"></el-button>
+          <el-button type="primary" @click="sendGroupMessage" :disabled="!canSendMessage || myBannedStatus">发送</el-button>
+          <el-button icon="el-icon-paperclip" @click="triggerFileUpload" :disabled="myBannedStatus" :title="myBannedStatus ? '您已被禁言，无法发送文件' : ''" ></el-button>
           <input type="file" ref="fileInput" style="display: none" @change="handleFileUpload">
-        </div>
+          </div>
+          </template>
       </div>
 
       <!-- 图片预览弹窗 -->
@@ -148,7 +156,8 @@ export default {
       previewImageName: '',
       currentFile: null,
       // 未读消息计数
-      unreadCounts: {}
+      unreadCounts: {},
+      myBannedStatus: false,
     };
   },
   computed: {
@@ -231,8 +240,14 @@ export default {
     }
   },
   methods: {
+    
     // 修改键盘事件处理
     handleKeyUp(event) {
+      // 禁言情况下直接返回，不处理任何输入
+    if (this.myBannedStatus) {
+      this.$message.warning('您已被禁言，无法发送消息');
+      return;
+      }
       // 检查是否按下了Ctrl+Enter组合键
       const isCtrlEnter = event.ctrlKey && event.key === 'Enter';
 
@@ -271,6 +286,22 @@ export default {
         this.scrollToBottom();
       }
     },
+    async fetchMyGroupStatus(groupId) {
+  try {
+    const res = await axios.post('http://localhost:8081/group/getRelationshipInfo', {
+      groupId: groupId,
+      userId: this.myId
+    });
+    if (res.data.code === 200 && res.data.data) {
+      this.myGroupIdentity = res.data.data.identity;
+      this.myBannedStatus = res.data.data.isBannedToPost;
+    }
+  } catch (err) {
+    console.error('获取禁言状态失败:', err);
+    this.myGroupIdentity = null;
+    this.myBannedStatus = false;
+  }
+},
 
     // 选择群聊
     async selectGroup(group) {
@@ -282,6 +313,9 @@ export default {
 
       // 加载群消息
       await this.loadGroupMessages(group.id);
+      //加载当前身份&状态
+      await this.fetchMyGroupStatus(group.id);
+
     },
     //加载群聊成员信息
     async loadGroupMembers(groupId) {
@@ -414,6 +448,11 @@ export default {
     },
     
     async sendGroupMessage() {
+      if (this.myBannedStatus) {
+      this.$message.warning('您已被禁言，无法发送消息');
+        return;
+      }
+
       if (!this.inputMessage.trim() || !this.selectedGroup) return;
 
       // 准备文本消息的载荷
@@ -622,6 +661,15 @@ export default {
 </script>
 
 <style scoped>
+/* 禁言样式 */
+.ban-tip {
+  text-align: center;
+  font-size: 14px;
+  color: #f56c6c;
+  margin-bottom: 10px;
+  font-weight: bold;
+}
+
 /* 添加字数统计样式 */
 .character-count {
   text-align: right;

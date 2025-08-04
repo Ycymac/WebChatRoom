@@ -7,28 +7,52 @@
   width="500px"
   append-to-body
 >
+    <el-button
+  :type="isAllMuted ? 'success' : 'danger'"
+  size="mini"
+  style="margin-bottom: 10px"
+  @click="toggleAllBan"
+  v-if="isGroupCreator(selectedGroup)"
+>
+  {{ isAllMuted ? '解除全员禁言' : '全员禁言' }}
+</el-button>
+
   <div v-if="memberList.length">
     <el-row v-for="member in memberList" :key="member.id" class="member-item" align="middle" justify="space-between">
       <el-col :span="18" class="member-info">
         <img :src="member.image || defaultGroupAvatar" class="group-avatar" @error="setDefaultGroupImage" />
+        <span v-if="member.isBannedToPost" style="color: red; margin-left: 6px;">[已禁言]</span>
         <span class="member-name">{{ member.nickName }}</span>
         <span class="member-account">（账号：{{ member.accountId }}）</span>
       </el-col>
 
-      <el-col :span="6" class="member-actions" v-if="isGroupCreator(selectedGroup)">
+      <el-col :span="6" class="member-actions" v-if="isGroupCreator(selectedGroup) || isGroupAdmin()">
         <template v-if="member.id !== id">
           <el-button
+          v-if="member.identity!=2"
             type="danger"
             size="mini"
             @click="kickMember(member)"
           >踢出群聊</el-button>
 
           <el-button
-            :type="member.identity === 2 ? 'warning' : 'primary'"
+           :type="member.isBannedToPost ? 'success' : 'info'"
+            size="mini"
+            @click="toggleBan(member)"
+            v-if="canBan(member)"
+            >
+             {{ member.isBannedToPost ? '解除禁言' : '禁言' }}
+            </el-button>
+
+
+
+          <el-button
+            v-if="isGroupCreator(selectedGroup)"
+            :type="member.identity === 1 ? 'warning' : 'primary'"
             size="mini"
             @click="toggleAdmin(member)"
           >
-            {{ member.identity === 2 ? '撤销管理员' : '设为管理员' }}
+            {{ member.identity === 1 ? '撤销管理员' : '设为管理员' }}
           </el-button>
         </template>
       </el-col>
@@ -245,7 +269,7 @@
                 <el-button 
                   type="danger" 
                   size="mini"
-                  @click="confirmDestoryGroup(group)"
+                  @click="confirmDestroyGroup(group)"
                 >
                   注销群聊
                 </el-button>
@@ -367,6 +391,7 @@ export default {
       showMemberDialog: false,
       selectedGroup: null, // 当前选中的群聊对象
       memberList: [],       // 当前群聊成员
+      isAllMuted: false,
 
     };
   },
@@ -388,6 +413,77 @@ export default {
     this.loadFriends();
   },
   methods: {
+    isGroupAdmin() {
+  // 如果成员列表还没加载好，就返回 false
+  if (!this.memberList || this.memberList.length === 0) {
+    return false;
+  }
+  // 在成员列表中找到自己
+  const me = this.memberList.find(m => m.id === this.id);
+  // 判断自己的身份是否是管理员（假设 1 代表管理员）
+  return me?.identity === 1;
+},
+    async toggleBan(member) {
+    const url = member.isBannedToPost
+      ? 'http://localhost:8081/group/unban'
+      : 'http://localhost:8081/group/ban';
+
+    try {
+      const res = await axios.post(url, {
+        accountId: member.id,
+        groupId: this.selectedGroup.id
+      });
+
+      if (res.data.code === 200) {
+        this.$set(member, 'isBannedToPost', !member.isBannedToPost);
+        this.$message.success(member.isBannedToPost ? '已禁言' : '已解除禁言');
+
+        // 如果所有非群主成员都被禁言，更新 isAllMuted 状态
+        const allMuted = this.memberList
+          .filter(m => m.identity !== 2)
+          .every(m => m.isBannedToPost);
+        this.isAllMuted = allMuted;
+
+      } else {
+        this.$message.error('操作失败');
+      }
+    } catch (err) {
+      this.$message.error('请求失败');
+      console.error(err);
+    }
+  },
+
+  canBan(member) {
+    if (this.isGroupCreator(this.selectedGroup)) {
+      return member.id !== this.id; // 群主不能禁自己
+    }
+    const me = this.memberList.find(m => m.id === this.id);
+    return me?.identity === 1 && member.identity === 0; // 管理员只能禁普通成员
+  },
+    async toggleAllBan() {
+    const url = this.isAllMuted
+      ? 'http://localhost:8081/group/unbanAll'
+      : 'http://localhost:8081/group/banAll';
+
+    try {
+      const res = await axios.post(url, {
+        groupId: this.selectedGroup.id
+      });
+
+      if (res.data.code === 200) {
+        this.isAllMuted = !this.isAllMuted;
+        this.memberList.forEach(m => {
+          if (m.identity !== 2) m.isBannedToPost = this.isAllMuted;
+        });
+        this.$message.success(this.isAllMuted ? '已全员禁言' : '已解除全员禁言');
+      } else {
+        this.$message.error('操作失败');
+      }
+    } catch (err) {
+      this.$message.error('请求失败');
+      console.error(err);
+    }
+  },
     async openMemberDialog(group) {
   this.selectedGroup = group;
   console.log("当前群聊创建者Id:"+group.creatorId);
@@ -402,7 +498,17 @@ export default {
     });
 
     if (res.data.code === 200) {
+      console.log("1");
       this.memberList = res.data.data;
+      console.log('成员列表', this.memberList);
+      console.log('当前用户 ID', this.id);
+      const me = this.memberList.find(m => m.id === this.id);
+      console.log('我是：', me);
+
+      // 判断是否被禁言
+        this.isAllMuted = this.memberList
+        .filter(m => m.identity !== 2)
+        .every(m => m.isBannedToPost);
     } else {
       this.$message.error('获取群成员失败');
     }
@@ -437,8 +543,8 @@ export default {
   });
 }
 ,async toggleAdmin(member) {
-  const newIdentity = member.identity === 2 ? 1 : 2;
-  const action = newIdentity === 2 ? '设为管理员' : '撤销管理员';
+  const newIdentity = member.identity === 1? 0 : 1;
+  const action = newIdentity === 1 ? '设为管理员' : '撤销管理员';
 
   try {
     const res = await axios.post('http://localhost:8081/group/editMemberIdentity', {
@@ -675,7 +781,7 @@ async submitEditGroup() {
     },
     
     // 注销群聊
-    async confirmDestoryGroup(group) {
+    async confirmDestroyGroup(group) {
       this.$confirm(`确定要注销群聊【${group.name}】吗？此操作不可撤销！`, '警告', {
         confirmButtonText: '确定',
         cancelButtonText: '取消',
