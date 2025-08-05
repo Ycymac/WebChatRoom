@@ -241,7 +241,7 @@ export default {
   },
   methods: {
     
-    // 修改键盘事件处理
+    // 键盘事件处理
     handleKeyUp(event) {
       // 禁言情况下直接返回，不处理任何输入
     if (this.myBannedStatus) {
@@ -286,6 +286,7 @@ export default {
         this.scrollToBottom();
       }
     },
+    //获取自己在群聊当中的状态
     async fetchMyGroupStatus(groupId) {
   try {
     const res = await axios.post('http://localhost:8081/group/getRelationshipInfo', {
@@ -304,6 +305,7 @@ export default {
 },
 
     // 选择群聊
+
     async selectGroup(group) {
       this.selectedGroup = group;
       // 加载群成员信息
@@ -343,7 +345,7 @@ export default {
         console.error('加载群成员失败:', err);
       }
     },
-    //针对性加载群聊消息
+    //针对性加载群聊消息记录
     async loadGroupMessages(groupId) {
       try {
         // 实现群消息加载逻辑
@@ -359,7 +361,7 @@ export default {
       }
     },
     // 加载群聊记录
-    async loadMessages() {
+   /*  async loadMessages() {
       if (!this.selectedGroup) return;
 
       try {
@@ -381,8 +383,13 @@ export default {
         console.error('加载群聊记录出错:', error);
         this.$message.error('加载群聊记录失败');
       }
-    },
- 
+    }, */
+    async loadMessages() {
+  if (this.selectedGroup) {
+    await this.loadGroupMessages(this.selectedGroup.id);
+  }
+},
+
     async startPolling() {
       // **新增的守卫逻辑**
       // 检查 myId 是否已经从父组件传递过来并有效
@@ -399,6 +406,7 @@ export default {
       while (this.pollingActive) {
         try {
           // 这里的请求现在是安全的，因为 myId 一定有值
+          //拉取自己的群聊消息
           const response = await axios.post('http://localhost:8081/groupmsg/poll', {
             userId: this.myId
           }, {
@@ -409,21 +417,22 @@ export default {
             const newMessages = response.data.data;
 
             newMessages.forEach(newMsg => {
-              // 情况一：自己的回声消息
+              //发送者的Id是自己并且客户端给自己发送的消息的临时id存在，说明是临时消息
               const echoIndex = (newMsg.senderId === this.myId && newMsg.clientMsgId)
                 ? this.messages.findIndex(m => m.clientMsgId === newMsg.clientMsgId)
                 : -1;
-
+              // 情况一：自己的回声消息，已经在本地进行渲染，不需要进行渲染，继续执行循环  
               if (echoIndex !== -1) {
                 this.$set(this.messages, echoIndex, { ...newMsg, status: 'sent' });
                 return;
               }
 
               // 情况二：别人的新消息
+              //在消息当中已经有了，不再进行渲染
               if (this.messages.some(m => m.id && m.id === newMsg.id)) {
                 return;
               }
-
+              //当前群聊的消息，进行渲染  
               if (this.selectedGroup && this.selectedGroup.id === newMsg.groupId) {
                 this.messages.push(newMsg);
               } else {
@@ -448,6 +457,7 @@ export default {
     },
     
     async sendGroupMessage() {
+      //检查是否被禁言·
       if (this.myBannedStatus) {
       this.$message.warning('您已被禁言，无法发送消息');
         return;
@@ -468,7 +478,7 @@ export default {
       this.inputMessage = '';
     },
 
-    // 滚动到底部
+    // 滚动到底部展示消息
     scrollToBottom() {
       const container = this.$refs.messagesContainer;
       if (container) {
@@ -575,6 +585,7 @@ export default {
         event.target.value = '';
       }
     },
+    //通过消息载荷判断是什么类型的消息
     async sendMessage(messagePayload) {
       // 1. 生成唯一的客户端ID
       const clientMsgId = Date.now() + Math.random().toString(36).substr(2, 9);
@@ -601,7 +612,7 @@ export default {
         // 5. 将消息发送到后端
         // 后端需要能够接收并回传 clientMsgId
         await axios.post('http://localhost:8081/groupmsg/send', localMessage);
-        // **注意：成功逻辑完全交给 startPolling 处理**
+        // **注意：成功逻辑之后的消息更新完全交给 startPolling 处理**
       } catch (error) {
         console.error('消息发送失败:', error);
         this.$message.error('消息发送失败');
