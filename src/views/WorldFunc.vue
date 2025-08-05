@@ -315,6 +315,14 @@ export default {
 
       // 加载群消息
       await this.loadGroupMessages(group.id);
+       // 【关键修复】
+  // 在消息数据加载完毕后，我们使用 $nextTick 来确保
+  // 在 Vue 完成 DOM 渲染之后，再执行滚动操作。
+    this.$nextTick(() => {
+      this.scrollToBottom();
+      // 初始加载后，我们默认用户就在底部，以便新消息可以智能滚动
+      this.isNearBottom = true; 
+      });
       //加载当前身份&状态
       await this.fetchMyGroupStatus(group.id);
 
@@ -393,6 +401,7 @@ export default {
     async startPolling() {
       // **新增的守卫逻辑**
       // 检查 myId 是否已经从父组件传递过来并有效
+      //同时检查是否在长轮询
       if (!this.myId) {
         // 如果 myId 还没有值 (比如 null, undefined, 0)，
         // 则不执行轮询，而是等待1秒后再次尝试启动。
@@ -402,7 +411,6 @@ export default {
       }
 
       // ---- 只有在 myId 有效时，才会执行到下面的循环 ----
-
       while (this.pollingActive) {
         try {
           // 这里的请求现在是安全的，因为 myId 一定有值

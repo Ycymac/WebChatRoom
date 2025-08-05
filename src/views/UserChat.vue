@@ -204,7 +204,7 @@ export default {
     }
   },
   async created() {
-    // 从 localStorage 获取用户信息
+    // 从 localStorage浏览器缓存 获取用户信息
     this.userAvatar = localStorage.getItem('userAvatar') || '';
     this.nickname = localStorage.getItem('nickName') || '用户';
     this.id = Number(localStorage.getItem('id')) || null;
@@ -371,7 +371,7 @@ export default {
   }
 
     },
-    // 点击功能按钮切换组件（可扩展）
+    // 点击功能按钮切换组件
     async goToChat() {
       const now = Date.now();
       if (now - this.lastLoadTime > this.loadCooldown) {
