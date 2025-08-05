@@ -368,30 +368,7 @@ export default {
         console.error('加载群消息失败:', err);
       }
     },
-    // 加载群聊记录
-   /*  async loadMessages() {
-      if (!this.selectedGroup) return;
-
-      try {
-        const response = await axios.post('http://localhost:8081/groupmsg/loadmsg', {
-          groupId: this.selectedGroup.id
-        });
-
-        if (response.data.code === 200) {
-          this.messages = response.data.data;
-          // 滚动到底部
-          this.$nextTick(() => {
-            this.scrollToBottom();
-            this.isNearBottom = true;
-          });
-        } else {
-          this.$message.error('加载群聊记录失败');
-        }
-      } catch (error) {
-        console.error('加载群聊记录出错:', error);
-        this.$message.error('加载群聊记录失败');
-      }
-    }, */
+  
     async loadMessages() {
   if (this.selectedGroup) {
     await this.loadGroupMessages(this.selectedGroup.id);
