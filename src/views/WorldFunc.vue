@@ -401,7 +401,6 @@ export default {
     async startPolling() {
       // **新增的守卫逻辑**
       // 检查 myId 是否已经从父组件传递过来并有效
-      //同时检查是否在长轮询
       if (!this.myId) {
         // 如果 myId 还没有值 (比如 null, undefined, 0)，
         // 则不执行轮询，而是等待1秒后再次尝试启动。

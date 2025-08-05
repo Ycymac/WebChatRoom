@@ -445,7 +445,7 @@ export default {
       // 轮询时间设置
       this.statusPollingInterval = setInterval(() => {
         this.fetchFriendStatuses();
-      }, 5500);
+      }, 550000);
     },
     // 触发文件选择
     triggerFileUpload() {
