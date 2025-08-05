@@ -304,6 +304,7 @@ export default {
         });
           //成功返回并有消息
         if (response.data.code === 200 && response.data.data) {
+          console.log("收到后端消息列表"+response.data.data);
           response.data.data.forEach(msg => {
             // 只添加当前聊天窗口的消息
             if (this.selectedFriend &&
@@ -441,10 +442,10 @@ export default {
       // 先立即获取一次
       this.fetchFriendStatuses();
 
-      // 每30秒轮询一次
+      // 轮询时间设置
       this.statusPollingInterval = setInterval(() => {
         this.fetchFriendStatuses();
-      }, 5500);
+      }, 550000);
     },
     // 触发文件选择
     triggerFileUpload() {
