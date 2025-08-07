@@ -7,7 +7,7 @@
       <div class="header animated fadeInDown" >欢迎来到WeChat网页聊天室！</div>
       <div class="main">
         <!-- 注册弹窗 -->
-          <el-dialog title="注册新账号" :visible.sync="registerVisible" width="60vw" >
+          <el-dialog title="注册新账号" :visible.sync="registerVisible" width="60vw" append-to-body >
             <el-form :model="registerForm" label-width="100px" :rules="registerRules" ref="registerFormRef">
               <!-- 账号ID -->
               <el-form-item label="账号ID" prop="accountId">
@@ -320,7 +320,7 @@ export default {
             console.error(e);
           }
         } else {
-          this.$message.warning('请确保所有信息正确');
+          this.$message.warning('请确保所有信息正确、符合规范');
         }
       });
     },
