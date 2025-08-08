@@ -175,11 +175,11 @@ export default {
           this.userAvatar = userData.image;
 
           // 存储用户信息
-          localStorage.setItem('userAvatar', userData.image);
-          localStorage.setItem('userId', userData.accountId);
-          localStorage.setItem('nickName', userData.nickName);
-          localStorage.setItem('id', userData.id);
-          localStorage.setItem('status',userData.status);
+          sessionStorage.setItem('userAvatar', userData.image);
+          sessionStorage.setItem('userId', userData.accountId);
+          sessionStorage.setItem('nickName', userData.nickName);
+          sessionStorage.setItem('id', userData.id);
+          sessionStorage.setItem('status',userData.status);
           this.loginSuccess = true;
 
           

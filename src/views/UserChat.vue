@@ -186,7 +186,7 @@ export default {
       groupedGroups: {}, // 群聊分组数据
        showUserInfoDialog: false, // 控制用户信息弹窗显示
       showEditDialog: false,    // 控制编辑弹窗显示
-      accountId: localStorage.getItem('accountId') || '', // 账号ID
+      accountId: sessionStorage.getItem('accountId') || '', // 账号ID
       editForm: {
         nickName: '',
         image: '',
@@ -205,11 +205,11 @@ export default {
   },
   async created() {
     // 从 localStorage浏览器缓存 获取用户信息
-    this.userAvatar = localStorage.getItem('userAvatar') || '';
-    this.nickname = localStorage.getItem('nickName') || '用户';
-    this.id = Number(localStorage.getItem('id')) || null;
-    this.userId=localStorage.getItem('userId')
-    this.status = Number(localStorage.getItem('status'));
+    this.userAvatar = sessionStorage.getItem('userAvatar') || '';
+    this.nickname = sessionStorage.getItem('nickName') || '用户';
+    this.id = Number(sessionStorage.getItem('id')) || null;
+    this.userId=sessionStorage.getItem('userId')
+    this.status = Number(sessionStorage.getItem('status'));
     // 默认显示聊天组件
     this.currentComponent = 'ChatFunc';
     await this.loadFriendsList();//请求好友列表数据
@@ -299,8 +299,8 @@ export default {
           this.$message.success('个人资料更新成功');
           
           // 更新本地存储和显示
-          localStorage.setItem('nickName', this.editForm.nickName);
-          localStorage.setItem('userAvatar', this.editForm.image);
+          sessionStorage.setItem('nickName', this.editForm.nickName);
+          sessionStorage.setItem('userAvatar', this.editForm.image);
           this.nickname = this.editForm.nickName;
           this.userAvatar = this.editForm.image;
           
@@ -324,7 +324,7 @@ export default {
 
         if (response.data.code == 200) {
           // 清除本地存储的用户信息
-          localStorage.clear();
+          sessionStorage.clear();
 
           // 跳转到登录页
           window.location.href = '/';//硬刷新，确保完全重置

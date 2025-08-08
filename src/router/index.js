@@ -47,12 +47,21 @@ const router = new VueRouter({
 功能：路由跳转之前拦截请求（路由切换请求）、身份验证（验证当前用户是否登录）、访问控制（禁止未授权的用户访问UserChat）、重定向到首页
  */
 router.beforeEach((to, from, next) => {
-  if (to.name === 'UserChat' && !localStorage.getItem('userId')) {
-    next('/');
-  } else {
-    next();
+  const storedUserId = sessionStorage.getItem('userId');
+
+  // 访问 UserChat 页面
+  if (to.name === 'UserChat') {
+    const targetUserId = decodeURIComponent(to.params.encodedId);
+
+    // 未登录或目标 ID 与本地 ID 不一致，则跳回登录页
+    if (!storedUserId || storedUserId !== targetUserId) {
+      return next('/');
+    }
   }
+
+  next(); // 放行
 });
+
 // 1. 解决重复导航错误
 const originalPush = VueRouter.prototype.push
 VueRouter.prototype.push = function push(location) {

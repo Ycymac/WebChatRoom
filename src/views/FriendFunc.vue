@@ -406,7 +406,7 @@ export default {
       );
     },
     id() {
-      return Number(localStorage.getItem('id')) || null;
+      return Number(sessionStorage.getItem('id')) || null;
     }
   },
   mounted() {
@@ -709,12 +709,12 @@ async submitEditGroup() {
     async loadFriends() {
       try {
         const res = await axios.post('http://localhost:8081/api/searchfs', {
-          nickName: localStorage.getItem('nickName')
+          nickName: sessionStorage.getItem('nickName')
         });
 
         if (res.data.code === 200 && res.data.data) {
           const friendships = res.data.data;
-          const currentId = String(localStorage.getItem('id'));
+          const currentId = String(sessionStorage.getItem('id'));
           
           this.friends = await Promise.all(friendships.map(async (f) => {
             const id1 = String(f.id1);
@@ -854,7 +854,7 @@ async submitEditGroup() {
         cancelButtonText: '取消',
         type: 'warning'
       }).then(async () => {
-        const currentNickName = localStorage.getItem('nickName');
+        const currentNickName = sessionStorage.getItem('nickName');
         try {
           const res = await axios.post('http://localhost:8081/api/deletefs', {
             nickName1: currentNickName,
@@ -896,7 +896,7 @@ async submitEditGroup() {
       this.$message.success('已取消置顶');
     },
     async updateRelationship(friend, status) {
-      const currentId = localStorage.getItem('id');
+      const currentId = sessionStorage.getItem('id');
       const friendId = friend.id;
 
       try {
